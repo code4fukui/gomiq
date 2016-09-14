@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8'/>
+<title>ゴミ燃やしクイズ</title>
+<link rel="apple-touch-icon" href="burnq.png"/>
+<meta property="og:image" content="burnq.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
+<script src="lib/fukuno.js"></script>
+<script src="lib/odp.js"></script>
+<script>"use strict";
+
+window.onload = function() {
+	var type = "";
+	var q =
+		"PREFIX jrrk: <http://purl.org/jrrk#>\n" +
+		"PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n" +
+		"PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+		"select ?name ?cls ?desc {\n" +
+		"?uri rdf:type <http://purl.org/jrrk#Rubbish>;\n" +
+		"rdfs:label ?name;\n" +
+		"<http://schema.org/description> ?desc;\n" +
+		"<http://purl.org/jrrk#classified> ?cls.\n" +
+		"filter(lang(?name)=\"ja\")" +
+		"}";
+//		alert(q);
+	querySPARQL(q, function(data) {
+//		dump(data);
+		var items = [];
+		var d = data.results.bindings;
+		for (var i = 0; i < d.length; i++) {
+			var dd = d[i];
+			var o = {
+				name: dd.name.value,
+				cls: decodeURIComponent(dd.cls.value.substring("http://odp.jig.jp/res/classified/".length)),
+				desc: dd.desc.value,
+			};
+			items.push(o);
+		}
+//		dump(items);
+		game(items);
+	});
+};
+var game = function(items) {
+	var burn = [];
+	var nburn = [];
+	for (var i = 0; i < items.length; i++) {
+		if (items[i].cls == "燃えるごみ" || items[i].cls == "燃やすごみ")
+			burn.push(items[i]);
+		else
+			nburn.push(items[i]);
+	}
+	get("desc").textContent = items.length + "品目中 燃えるゴミ:" + burn.length + "品目";
+
+	var cntok = 0;
+	var cnt = 0;
+
+	var viewResult = function(b) {
+		var qa = get('qa');
+		qa.innerHTML = b ? '○' : '×';
+		qa.style.color = b ? 'red' : 'blue';
+		qa.style.position = 'absolute';
+		setTimeout(function() {
+			var qa = get('qa');
+			qa.innerHTML = '';
+		}, 250);
+	};
+	var viewResultStatus = function() {
+		var s = cntok + "/" + cnt;
+		if (cnt > 0)
+			s += " - " + fix2(cntok / cnt * 100) + "%"
+		get('result').innerHTML = s;
+	};
+	var setQ = function() {
+		cnt++;
+		var ncnt = random(3) + 1;
+
+		shuffle(burn);
+		shuffle(nburn);
+		var a = [];
+		for (var i = 0; i < ncnt; i++)
+			a.push(burn[i]);
+		for (var i = 0; i < 5 - ncnt; i++)
+			a.push(nburn[i]);
+		shuffle(a);
+
+		get('q').innerHTML = ncnt + "コ燃やせ！";
+		for (var i = 0; i < a.length; i++) {
+			var div = get("a" + (i + 1));
+			div.innerHTML = (i + 1) + ". " + a[i].name;
+			div.item = a[i];
+			div.style.background = "#f0f0d0";
+			div.burn = false;
+		}
+		return ncnt;
+	};
+
+	var burncnt = 0;
+
+	viewResultStatus();
+	for (var i = 0; i < 5; i++) {
+		get('a' + (i + 1)).onclick = function() {
+			if (this.burn)
+				return;
+			var b = this.item.cls == "燃えるごみ" || this.item.cls == "燃やすごみ";
+//			dump(this.item);
+			if (b) {
+				this.style.background = "#ff0000";
+				this.burn = true;
+				if (--burncnt == 0) {
+					cntok++;
+					viewResult(true);
+					viewResultStatus();
+					burncnt = setQ();
+				}
+			} else {
+				viewResult(false);
+				alert(this.item.cls + "\n" + this.item.desc);
+				setTimeout(function() {
+					viewResultStatus();
+					burncnt = setQ();
+				}, 1000);
+			}
+
+		}
+	}
+
+	burncnt = setQ();
+
+	get('reset').onclick = function() {
+		cnt = cntok = 0;
+		viewResultStatus();
+		setQ();
+	};
+}
+//util
+var fix2 = function(val) {
+	var n = Math.floor(val);
+	var n2 = "" + Math.floor(val * 100 - n * 100);
+	if (n2.length == 1)
+		n2 = "0" + n2;
+	return n + "." + n2;
+};
+var random = function(n) {
+	return Math.floor(Math.random() * n);
+};
+var getRandom = function(array) {
+	return array[random(array.length)];
+};
+</script>
+<style>
+body {
+	margin: 0px;
+}
+h1 {
+	color: #880000;
+	text-align: center;
+	font-size: 45px;
+}
+#qcanvas {
+	text-align: center;
+}
+#qa {
+	font-size: 240px;
+	text-align: center;
+	width: 100%;
+}
+#q {
+	text-align: left;
+	font-size: 35px;
+	background: #ffe;
+	width: 100%;
+	padding: 8px 2px 8px 2px;
+}
+.a {
+	text-align: left;
+	font-size: 32px;
+	background: #f0f0d0;
+	width: 100%;
+	cursor: pointer;
+	line-height: 35px;
+	padding: 4px 4px 4px 8px;
+}
+#result {
+	font-size: 20px;
+	background: #f0f0b0;
+	padding: 2px;
+}
+#reset {
+	margin: 20px;
+	font-size: 120%;
+	border: 2px solid #333;
+	background: #ffe;
+}
+.src {
+	text-align: center;
+	margin: 10px 0px 10px 0px;
+	font-size: 90%;
+}
+a {
+	color: gray !important;
+}
+.ad {
+	text-align: center;
+	margin-bottom: 1em;
+	background: #f7f7f7;
+	padding: 4px;
+}
+#desc {
+	text-align: center;
+}
+</style>
+</head>
+<body>
+
+<h1>ごみ燃やしゲーム（鯖江編）</h1>
+<div id="desc"></div>
+<div id='qcanvas'>
+	<div id='qa'></div>
+
+	<div id='q'></div>
+	<div id='a1' class='a'></div>
+	<div id='a2' class='a'></div>
+	<div id='a3' class='a'></div>
+	<div id='a4' class='a'></div>
+	<div id='a5' class='a'></div>
+	<div id='result'></div>
+
+	<button id='reset'>reset</button>
+</div>
+
+<div class="ad">
+<a href=http://otamart.com/ target=_blank>
+<img src=otamart.png width=64 style="vertical-align:middle"> オタクグッズはオタマートで売っちゃおう！[PR]
+</a>
+</div>
+<div class="src">
+APP: CC BY <a href=http://fukuno.jig.jp/1514 target=_blank>福野泰介の一日一創 - ごみ燃やしゲーム</a><br>
+DATA: CC BY <a href=http://sparql.odp.jig.jp/ target=_blank>odp SPARQL Endpoint</a><br>
+</div>
+
+</body>
+</html>
