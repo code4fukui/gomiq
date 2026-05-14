@@ -6,7 +6,7 @@ A fast-paced quiz game to test your knowledge of trash sorting. Based on the bur
 
 ## Demo
 
-Play the game live: **https://code4fukui.github.io/gomiq/**
+Play the game live: **https://github.com/code4fukui/gomiq
 
 ## How to Play
 

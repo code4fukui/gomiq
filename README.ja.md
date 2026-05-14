@@ -4,7 +4,7 @@
 
 ## デモ
 
-ブラウザでプレイする: **https://code4fukui.github.io/gomiq/**
+ブラウザでプレイする: **https://github.com/code4fukui/gomiq
 
 ## 遊び方
 
